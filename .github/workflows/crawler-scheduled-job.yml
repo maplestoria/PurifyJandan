@@ -3,9 +3,6 @@ name: Crawler Scheduled Job
 on:
   schedule:
     - cron: '0 1 * * *' # 9am UTC+8 is 1am UTC
-  push:
-    branches-ignore:
-      - '**'
 
 jobs:
   scheduled-job:

@@ -2,10 +2,7 @@ name: Analyzer Scheduled Job
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # Every 5 minutes
-  push:
-    branches-ignore:
-      - '**'
+    - cron: '0 */5 * * *' # Every 5 hours
 
 jobs:
   scheduled-job:
@@ -24,7 +21,7 @@ jobs:
         env:
             GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          echo "This job runs every 5 minutes."
+          echo "This job runs every 5 hours."
           cd analyzer
           go run .
       - name: Commit & Push changes
