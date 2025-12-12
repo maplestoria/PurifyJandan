@@ -12,7 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@master
+        with:
+          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
+          fetch-depth: 0             # otherwise, you will fail to push refs to dest repo
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -24,14 +27,7 @@ jobs:
           echo "This job runs only at 9am UTC+8 and not on push events."
           cd automation
           go run .
-          
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add automation/data/*
-          if ! git diff --cached --quiet; then
-            git commit -m "Update data folder from scheduled job"
-            git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git
-            git push origin HEAD:${{ github.ref }}
-          else
-            echo "No changes to commit."
-          fi
+      - name: Commit & Push changes
+        uses: actions-js/push@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
