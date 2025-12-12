@@ -23,7 +23,7 @@ jobs:
       - name: Run your script
         run: |
           echo "This job runs only at 9am UTC+8 and not on push events."
-          cd automation
+          cd crawler
           go run .
       - name: Commit & Push changes
         uses: actions-js/push@master
