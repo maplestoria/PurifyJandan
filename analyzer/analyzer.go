@@ -31,9 +31,9 @@ func main() {
 		log.Fatalf("Failed to read posts: %v", err)
 	}
 
-	filtered := filterRecentPosts(posts, 3, blockedUsers)
+	filtered := filterRecentPosts(posts, 3)
 	userPosts := groupPostsByUser(filtered)
-	topPosts := getTopPostsByVoteNegative(userPosts)
+	topPosts := getTopPostsByVoteNegative(userPosts, blockedUsers)
 
 	fmt.Printf("Top 1 post with most VoteNegative for each user (last 3 days): %d\n", len(topPosts))
 	for _, utp := range topPosts {
@@ -119,15 +119,11 @@ func importTime(dateStr string) (time.Time, error) {
 }
 
 // filterRecentPosts filters posts newer than N days ago and not by blocked users.
-func filterRecentPosts(posts []Post, days int, blockedUsers map[string]int) []Post {
+func filterRecentPosts(posts []Post, days int) []Post {
 	now := time.Now().UTC()
 	threshold := now.AddDate(0, 0, -days)
 	filtered := make([]Post, 0, len(posts))
 	for _, post := range posts {
-		if _, blocked := blockedUsers[post.Author]; blocked {
-			fmt.Printf("Skipping blocked user: %s\n", post.Author)
-			continue
-		}
 		t, err := importTime(post.DateGMT)
 		if err != nil {
 			continue
@@ -154,7 +150,7 @@ type UserTopPost struct {
 }
 
 // getTopPostsByVoteNegative finds the top 1 post with most VoteNegative for each user.
-func getTopPostsByVoteNegative(userPosts map[string][]Post) []UserTopPost {
+func getTopPostsByVoteNegative(userPosts map[string][]Post, blockedUsers map[string]int) []UserTopPost {
 	var topPosts []UserTopPost
 	for user, posts := range userPosts {
 		if len(posts) == 0 {
@@ -165,6 +161,10 @@ func getTopPostsByVoteNegative(userPosts map[string][]Post) []UserTopPost {
 			if p.VoteNegative > top.VoteNegative {
 				top = p
 			}
+		}
+		if _, blocked := blockedUsers[user]; blocked {
+			fmt.Printf("Skipping blocked user: %s\n", user)
+			continue
 		}
 		topPosts = append(topPosts, UserTopPost{User: user, Post: top})
 	}
