@@ -1,4 +1,4 @@
-name: Scheduled Job Only
+name: Crawler Scheduled Job
 
 on:
   schedule:
