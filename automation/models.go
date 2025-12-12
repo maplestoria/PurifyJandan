@@ -19,10 +19,12 @@ type DataBlock struct {
 
 // Item represents an entry in the "list" array.
 type Item struct {
-	ID      int    `json:"id"`
-	Author  string `json:"author"`
-	DateGMT string `json:"date_gmt"`
-	Content string `json:"content"`
+	ID           int    `json:"id"`
+	Author       string `json:"author"`
+	DateGMT      string `json:"date_gmt"`
+	Content      string `json:"content"`
+	VoteNegative int    `json:"vote_negative"`
+	VotePositive int    `json:"vote_positive"`
 }
 
 // DecodeRootResponse unmarshals bytes into RootResponse.

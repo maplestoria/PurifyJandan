@@ -33,9 +33,23 @@ func main() {
 	userActivity := filepath.Join(filepath.Dir(path), _userActivity)
 	fmt.Printf("file path: %s\n", historyPath)
 	fmt.Printf("file path: %s\n", userActivity)
-	// Attempt to load history to determine a smarter starting page
-	hist, _ := loadHistory(historyPath)
 
+	hist, _ := loadHistory(historyPath)
+	existingIDs := loadExistingIDs(userActivity)
+	fmt.Printf("Loaded %d existing IDs from CSV\n", len(existingIDs))
+
+	cutoff := time.Now().AddDate(0, -1, 0)
+	fmt.Printf("Cutoff (one month ago): %s\n", cutoff.Format(time.RFC3339))
+
+	if hist != nil {
+		runAscending(historyPath, userActivity, hist, existingIDs)
+	} else {
+		runDescending(historyPath, userActivity, cutoff, existingIDs)
+	}
+}
+
+// loadExistingIDs loads IDs from the CSV file into a map
+func loadExistingIDs(userActivity string) map[int]int {
 	existingIDs := make(map[int]int)
 	csvFile, err := os.Open(userActivity)
 	if err == nil {
@@ -56,169 +70,134 @@ func main() {
 		}
 		csvFile.Close()
 	}
-	fmt.Printf("Loaded %d existing IDs from CSV\n", len(existingIDs))
+	return existingIDs
+}
 
-	cutoff := time.Now().AddDate(0, -1, 0) // one month ago from now
-	// Optionally, you could base cutoff on history.LastExecution.
-	// Current implementation uses one month ago from now.
-	fmt.Printf("Cutoff (one month ago): %s\n", cutoff.Format(time.RFC3339))
+// runAscending handles the ascending fetch logic
+func runAscending(historyPath, userActivity string, hist *HistoryRecord, existingIDs map[int]int) {
+	fmt.Println("Resuming from history...")
+	fmt.Printf("Last execution: %s, Last page: %d\n", hist.LastExecution.Format(time.RFC3339), hist.LastPage)
+	startPage := hist.LastPage
+	if startPage < 0 {
+		startPage = 0
+	}
+	initialPage := startPage
+	if initialPage < 0 {
+		initialPage = 0
+	}
+	url := fmt.Sprintf(baseURL, initialPage)
+	resp, err := fetchPage(url)
+	if err != nil {
+		fmt.Printf("fetch error for page %d: %v\n", initialPage, err)
+		return
+	}
+	time.Sleep(1000 * time.Millisecond)
+	totalPages := 0
+	if resp != nil && resp.Data != nil {
+		totalPages = resp.Data.TotalPages
+	}
+	w, f, err := openCSV(userActivity)
+	if err != nil {
+		fmt.Println("failed to open csv:", err)
+		return
+	}
+	defer f.Close()
 
-	if hist != nil {
+	appendNewItems(w, resp, existingIDs)
 
-		// Ascending: first fetch history page + 1, then get bounds and iterate
-		fmt.Println("Resuming from history...")
-		fmt.Printf("Last execution: %s, Last page: %d\n", hist.LastExecution.Format(time.RFC3339), hist.LastPage)
-		startPage := hist.LastPage
-		if startPage < 0 {
-			startPage = 0
-		}
-		initialPage := startPage
-		if initialPage < 0 {
-			initialPage = 0
-		}
-		// Fetch initialPage first
-		url := fmt.Sprintf(baseURL, initialPage)
+	for page := initialPage + 1; page <= totalPages; page++ {
+		url := fmt.Sprintf(baseURL, page)
 		resp, err := fetchPage(url)
 		if err != nil {
-			fmt.Printf("fetch error for page %d: %v\n", initialPage, err)
-			return
+			fmt.Printf("fetch error for page %d: %v\n", page, err)
+			break
 		}
-		time.Sleep(300 * time.Millisecond)
-		// Use bounds from the initial fetch response
-		totalPages := 0
-		if resp != nil && resp.Data != nil {
-			totalPages = resp.Data.TotalPages
+		if resp.Data == nil {
+			fmt.Printf("no data for page %d\n", page)
+			break
+		} else {
+			fmt.Printf("Page %d: items=%d (ascending)\n", page, len(resp.Data.List))
+			_ = saveHistory(historyPath, HistoryRecord{
+				LastExecution: time.Now(),
+				LastPage:      page,
+			})
+			appendNewItems(w, resp, existingIDs)
 		}
-		// Prepare CSV writer
-		w, f, err := openCSV(userActivity)
+		time.Sleep(1000 * time.Millisecond)
+	}
+	fmt.Println("Stopping iteration due to page reached.")
+	appendNewItems(w, resp, existingIDs)
+}
+
+// runDescending handles the descending fetch logic
+func runDescending(historyPath, userActivity string, cutoff time.Time, existingIDs map[int]int) {
+	first, err := fetchPage(fmt.Sprintf(baseURL, 0))
+	if err != nil {
+		fmt.Println("failed to fetch first page:", err)
+		return
+	}
+	if first.Data == nil {
+		fmt.Println("missing data block in first page response")
+		return
+	}
+	w, f, err := openCSV(userActivity)
+	if err != nil {
+		fmt.Println("failed to open csv:", err)
+		return
+	}
+	defer f.Close()
+	firstDescPage := first.Data.CurrentPage
+	_ = saveHistory(historyPath, HistoryRecord{
+		LastExecution: time.Now(),
+		LastPage:      firstDescPage,
+	})
+	for page := firstDescPage; page >= 0; page-- {
+		url := fmt.Sprintf(baseURL, page)
+		resp, err := fetchPage(url)
+		stop := false
 		if err != nil {
-			fmt.Println("failed to open csv:", err)
-			return
+			fmt.Printf("fetch error for page %d: %v\n", page, err)
+			break
 		}
-		defer f.Close()
-
-		if resp != nil && resp.Data != nil {
-
+		if resp.Data == nil {
+			fmt.Printf("no data for page %d\n", page)
+			break
+		} else {
+			fmt.Printf("Page %d: items=%d (descending)\n", page, len(resp.Data.List))
 			for _, item := range resp.Data.List {
 				if _, found := existingIDs[item.ID]; !found {
-					fmt.Printf("Appending new item to CSV, ID: %d\n", item.ID)
 					_ = appendCSVRecord(w, item)
 					w.Flush()
 					existingIDs[item.ID] = 1
 				}
-			}
-		}
-
-		// Then iterate from initialPage+1 upwards
-		for page := initialPage + 1; page <= totalPages; page++ {
-			url := fmt.Sprintf(baseURL, page)
-			resp, err := fetchPage(url)
-			if err != nil {
-				fmt.Printf("fetch error for page %d: %v\n", page, err)
-				break
-			}
-			if resp.Data == nil {
-				fmt.Printf("no data for page %d\n", page)
-				break
-			} else {
-				fmt.Printf("Page %d: items=%d (ascending)\n", page, len(resp.Data.List))
-				_ = saveHistory(historyPath, HistoryRecord{
-					LastExecution: time.Now(),
-					LastPage:      page,
-				})
-
-				for _, item := range resp.Data.List {
-					if _, found := existingIDs[item.ID]; !found {
-						// append to CSV
-						_ = appendCSVRecord(w, item)
-						// flush periodically
-						w.Flush()
-						existingIDs[item.ID] = 1
-					}
+				t, perr := parseDate(item.DateGMT)
+				if perr != nil {
+					continue
 				}
-			}
-
-			time.Sleep(1000 * time.Millisecond)
-		}
-
-		fmt.Println("Stopping iteration due to page reached.")
-		// iterate resp.Data.List to check if the id exists in CSV, if not then append
-		// Read all IDs from CSV into a map (in memory), then append only new items
-		if resp != nil && resp.Data != nil {
-
-			for _, item := range resp.Data.List {
-				if _, found := existingIDs[item.ID]; !found {
-					fmt.Printf("Appending new item to CSV, ID: %d\n", item.ID)
-					_ = appendCSVRecord(w, item)
-					w.Flush()
-					existingIDs[item.ID] = 1
-				}
-			}
-		}
-
-	} else {
-		// Special descending: page=0 first, then total_pages-1, total_pages-2, ... until cutoff
-
-		// Fetch the first page from remote (page=0)
-		first, err := fetchPage(fmt.Sprintf(baseURL, 0))
-		if err != nil {
-			fmt.Println("failed to fetch first page:", err)
-			return
-		}
-		if first.Data == nil {
-			fmt.Println("missing data block in first page response")
-			return
-		}
-		// Prepare CSV writer
-		w, f, err := openCSV(userActivity)
-		if err != nil {
-			fmt.Println("failed to open csv:", err)
-			return
-		}
-		defer f.Close()
-		// Then iterate descending from total_pages-1 to 0
-		firstDescPage := first.Data.CurrentPage
-		_ = saveHistory(historyPath, HistoryRecord{
-			LastExecution: time.Now(),
-			LastPage:      firstDescPage,
-		})
-
-		for page := firstDescPage; page >= 0; page-- {
-			url := fmt.Sprintf(baseURL, page)
-			resp, err := fetchPage(url)
-			stop := false
-			if err != nil {
-				fmt.Printf("fetch error for page %d: %v\n", page, err)
-				break
-			}
-			if resp.Data == nil {
-				fmt.Printf("no data for page %d\n", page)
-				break
-			} else {
-				fmt.Printf("Page %d: items=%d (descending)\n", page, len(resp.Data.List))
-
-				for _, item := range resp.Data.List {
-					if _, found := existingIDs[item.ID]; !found {
-						// append to CSV
-						_ = appendCSVRecord(w, item)
-						w.Flush()
-						existingIDs[item.ID] = 1
-					}
-					t, perr := parseDate(item.DateGMT)
-					if perr != nil {
-						continue
-					}
-					if t.Before(cutoff) || t.Equal(cutoff) {
-						fmt.Printf("Reached cutoff at item id=%d date=%s (parsed=%s)\n", item.ID, item.DateGMT, t.Format(time.RFC3339))
-						stop = true
-						break
-					}
-				}
-				if stop {
-					fmt.Println("Stopping iteration due to cutoff reached.")
+				if t.Before(cutoff) || t.Equal(cutoff) {
+					fmt.Printf("Reached cutoff at item id=%d date=%s (parsed=%s)\n", item.ID, item.DateGMT, t.Format(time.RFC3339))
+					stop = true
 					break
 				}
-				time.Sleep(1000 * time.Millisecond)
+			}
+			if stop {
+				fmt.Println("Stopping iteration due to cutoff reached.")
+				break
+			}
+			time.Sleep(1000 * time.Millisecond)
+		}
+	}
+}
+
+// appendNewItems appends new items from resp to CSV if not already present
+func appendNewItems(w *csv.Writer, resp *RootResponse, existingIDs map[int]int) {
+	if resp != nil && resp.Data != nil {
+		for _, item := range resp.Data.List {
+			if _, found := existingIDs[item.ID]; !found {
+				fmt.Printf("Appending new item to CSV, ID: %d\n", item.ID)
+				_ = appendCSVRecord(w, item)
+				w.Flush()
+				existingIDs[item.ID] = 1
 			}
 		}
 	}
@@ -328,7 +307,7 @@ func openCSV(path string) (*csv.Writer, *os.File, error) {
 	info, _ := f.Stat()
 	w := csv.NewWriter(f)
 	if info.Size() == 0 {
-		_ = w.Write([]string{"id", "author", "date_gmt", "content"})
+		_ = w.Write([]string{"id", "author", "date_gmt", "vote_negative", "vote_positive", "content"})
 		w.Flush()
 	}
 	return w, f, nil
@@ -339,6 +318,8 @@ func appendCSVRecord(w *csv.Writer, item Item) error {
 		fmt.Sprintf("%d", item.ID),
 		item.Author,
 		item.DateGMT,
+		fmt.Sprintf("%d", item.VoteNegative),
+		fmt.Sprintf("%d", item.VotePositive),
 		encodeLineBreaks(item.Content),
 	}
 	if err := w.Write(rec); err != nil {
