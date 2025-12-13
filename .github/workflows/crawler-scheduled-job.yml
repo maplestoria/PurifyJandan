@@ -2,7 +2,7 @@ name: Crawler Scheduled Job
 
 on:
   schedule:
-    - cron: '0 1 * * *' # 9am UTC+8 is 1am UTC
+    - cron: '0 */6 * * *'  # Every 6 hours
 
 jobs:
   scheduled-job:
@@ -16,7 +16,7 @@ jobs:
           go-version: '1.25.5'
       - name: Run your script
         run: |
-          echo "This job runs only at 9am UTC+8 and not on push events."
+          echo "This job runs Every 6 hours"
           cd crawler
           go run .
       - name: Commit & Push changes
