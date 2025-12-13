@@ -21,11 +21,20 @@ import (
 )
 
 func main() {
-	blockedUsers, err := readBlockedUsers(filepath.Join("..", "blocked_users.txt"))
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	parent := filepath.Dir(wd)
+	fmt.Printf("Current working directory: %s\n", wd)
+	fmt.Printf("Parent directory: %s\n", parent)
+
+	blockedUsers, err := readBlockedUsers(filepath.Join(parent, "blocked_users.txt"))
 	if err != nil {
 		log.Printf("Failed to read blocked users: %v\n", err)
 	}
-	csvPath := filepath.Join("..", "crawler", "data", "user_activity.csv")
+	fmt.Printf("Loaded %d blocked users.\n", len(blockedUsers))
+	csvPath := filepath.Join(parent, "crawler", "data", "user_activity.csv")
 	posts, err := ReadPostsFromCSV(csvPath)
 	if err != nil {
 		log.Fatalf("Failed to read posts: %v", err)
