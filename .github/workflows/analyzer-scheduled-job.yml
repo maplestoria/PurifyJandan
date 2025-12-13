@@ -22,7 +22,6 @@ jobs:
             GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           echo "This job runs every 5 hours."
-          ls ../crawler/data/
           go run .
       - name: Commit & Push changes
         uses: actions-js/push@master
