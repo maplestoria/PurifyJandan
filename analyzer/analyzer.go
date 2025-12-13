@@ -68,9 +68,8 @@ func main() {
 		if shouldBlock {
 			if utp.Post.UserId != 0 {
 				blockedUsers.IDs = append(blockedUsers.IDs, utp.Post.UserId)
-			} else {
-				blockedUsers.Nicknames = append(blockedUsers.Nicknames, utp.Post.Author)
 			}
+			blockedUsers.Nicknames = append(blockedUsers.Nicknames, utp.Post.Author)
 			persistBlockedUser(pathBlockedUsers, blockedUsers)
 			fmt.Printf("UserId: %d, Author: %s, Post ID: %d, Image URL: %s is flagged by GenAI analysis.\n", utp.Post.UserId, utp.Post.Author, utp.Post.ID, url)
 		} else {
