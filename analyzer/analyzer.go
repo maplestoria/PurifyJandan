@@ -34,7 +34,10 @@ func main() {
 		log.Printf("Failed to read blocked users: %v\n", err)
 	}
 	fmt.Printf("Loaded %d blocked users.\n", len(blockedUsers))
+
 	csvPath := filepath.Join(parent, "crawler", "data", "user_activity.csv")
+	fmt.Printf("Reading posts from CSV: %s\n", csvPath)
+
 	posts, err := ReadPostsFromCSV(csvPath)
 	if err != nil {
 		log.Fatalf("Failed to read posts: %v", err)
@@ -266,7 +269,7 @@ func ReadPostsFromCSV(path string) ([]Post, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Printf("Total records read from CSV: %d\n", len(records))
 	var posts []Post
 	for i, rec := range records {
 		if i == 0 {
