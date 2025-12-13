@@ -1,8 +1,6 @@
 name: Analyzer Scheduled Job
 
 on:
-  push:
-    branches: [ "main" ]
   schedule:
     - cron: '0 */5 * * *' # Every 5 hours
 
@@ -22,7 +20,6 @@ jobs:
             GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           echo "This job runs every 5 hours."
-          ls ../crawler/data/
           go run .
       - name: Commit & Push changes
         uses: actions-js/push@master
