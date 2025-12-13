@@ -35,7 +35,7 @@ func main() {
 	}
 	fmt.Printf("Loaded %d blocked users.\n", len(blockedUsers))
 
-	csvPath := filepath.Join(parent, "crawler", "data", "user_activity.csv")
+	csvPath := filepath.Join(parent, "user_activity.csv")
 	fmt.Printf("Reading posts from CSV: %s\n", csvPath)
 
 	posts, err := ReadPostsFromCSV(csvPath)

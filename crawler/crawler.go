@@ -9,9 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -19,18 +17,22 @@ import (
 
 const baseURL = "https://jandan.net/api/comment/post/26402?order=desc&page=%d"
 
-var _historyPath = path.Join("data", "history.json")
-var _userActivity = path.Join("data", "user_activity.csv")
-
 type HistoryRecord struct {
 	LastExecution time.Time `json:"last_execution"`
 	LastPage      int       `json:"last_page"`
 }
 
 func main() {
-	_, path, _, _ := runtime.Caller(0)
-	historyPath := filepath.Join(filepath.Dir(path), _historyPath)
-	userActivity := filepath.Join(filepath.Dir(path), _userActivity)
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	parent := filepath.Dir(wd)
+	fmt.Printf("Current working directory: %s\n", wd)
+	fmt.Printf("Parent directory: %s\n", parent)
+
+	historyPath := filepath.Join(parent, "history.json")
+	userActivity := filepath.Join(parent, "user_activity.csv")
 	fmt.Printf("file path: %s\n", historyPath)
 	fmt.Printf("file path: %s\n", userActivity)
 
