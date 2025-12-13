@@ -4,11 +4,11 @@
 // @version      2025-12-13
 // @description  Purify Jandan by blocking certain users
 // @author       maplestoria
+// @homepage     https://github.com/maplestoria/PurifyJandan
 // @match        https://jandan.net/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=jandan.net
 // @grant        GM_setValue
 // @grant        GM_getValue
-// @grant        GM_getResourceText
 // @grant        GM_log
 // @grant        GM_xmlhttpRequest
 // @connect      raw.githubusercontent.com
