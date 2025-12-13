@@ -20,6 +20,7 @@ type DataBlock struct {
 // Item represents an entry in the "list" array.
 type Item struct {
 	ID           int    `json:"id"`
+	UserId       int    `json:"user_id"`
 	Author       string `json:"author"`
 	DateGMT      string `json:"date_gmt"`
 	Content      string `json:"content"`

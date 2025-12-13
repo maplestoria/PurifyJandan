@@ -39,12 +39,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to read posts: %v", err)
 	}
+	fmt.Printf("Total posts loaded: %d\n", len(posts))
 
 	filtered := filterRecentPosts(posts, 3)
+	fmt.Printf("Posts in the last 3 days: %d\n", len(filtered))
 	userPosts := groupPostsByUser(filtered)
+	fmt.Printf("Total users with posts in the last 3 days: %d\n", len(userPosts))
 	topPosts := getTopPostsByVoteNegative(userPosts, blockedUsers)
-
 	fmt.Printf("Top 1 post with most VoteNegative for each user (last 3 days): %d\n", len(topPosts))
+
 	for _, utp := range topPosts {
 		url, mimeType := ExtractImgSrcs(utp.Post.Content)
 		if len(url) < 1 {
