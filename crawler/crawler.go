@@ -28,13 +28,8 @@ func main() {
 		panic(err)
 	}
 	parent := filepath.Dir(wd)
-	fmt.Printf("Current working directory: %s\n", wd)
-	fmt.Printf("Parent directory: %s\n", parent)
-
 	historyPath := filepath.Join(parent, "history.json")
 	userActivity := filepath.Join(parent, "user_activity.csv")
-	fmt.Printf("file path: %s\n", historyPath)
-	fmt.Printf("file path: %s\n", userActivity)
 
 	hist, _ := loadHistory(historyPath)
 	existingIDs := loadExistingIDs(userActivity)

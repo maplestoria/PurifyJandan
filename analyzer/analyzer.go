@@ -26,9 +26,6 @@ func main() {
 		panic(err)
 	}
 	parent := filepath.Dir(wd)
-	fmt.Printf("Current working directory: %s\n", wd)
-	fmt.Printf("Parent directory: %s\n", parent)
-
 	pathBlockedUsers := filepath.Join(parent, "blocked_users.json")
 	blockedUsers, err := readBlockedUsers(pathBlockedUsers)
 	if err != nil {
@@ -75,9 +72,9 @@ func main() {
 				blockedUsers.Nicknames = append(blockedUsers.Nicknames, utp.Post.Author)
 			}
 			persistBlockedUser(pathBlockedUsers, blockedUsers)
-			fmt.Printf("User: %s, Post ID: %d, Image URL: %s is flagged by GenAI analysis.\n", utp.User, utp.Post.ID, url)
+			fmt.Printf("UserId: %d, Author: %s, Post ID: %d, Image URL: %s is flagged by GenAI analysis.\n", utp.Post.UserId, utp.Post.Author, utp.Post.ID, url)
 		} else {
-			fmt.Printf("User: %s, Post ID: %d, Image URL: %s is clean.\n", utp.User, utp.Post.ID, url)
+			fmt.Printf("Post ID: %d is clean.\n", utp.Post.ID)
 		}
 	}
 }
@@ -210,7 +207,17 @@ func analyzeContentWithGenAI(content []byte, mimeType string) (bool, error) {
 
 	parts := []*genai.Part{
 		genai.NewPartFromBytes(content, mimeType),
-		genai.NewPartFromText(`Please respond with only 'yes' or 'no.' Is the image a screenshot from a social media platform?Does the text in the image incite gender conflicts?Does the image contain content that may be unsettling (e.g., snakes, spiders)?`),
+		genai.NewPartFromText(`
+			Respond ONLY with "yes" or "no".
+
+			Return "yes" if the image satisfies at least one of the following:
+			- Social media screenshot (chat, comments, interactions)
+			- Gender conflict or implied female entitlement to financial/emotional benefits
+			- Unsettling content (e.g., snakes, spiders)
+			- Controversial or dispute-provoking content
+
+			Otherwise, return "no".
+		`),
 	}
 
 	contents := []*genai.Content{
