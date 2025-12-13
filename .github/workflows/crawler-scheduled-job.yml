@@ -10,9 +10,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@master
-        with:
-          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
-          fetch-depth: 0             # otherwise, you will fail to push refs to dest repo
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
