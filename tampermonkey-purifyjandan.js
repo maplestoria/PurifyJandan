@@ -10,6 +10,8 @@
 // @grant        GM_getValue
 // @grant        GM_getResourceText
 // @grant        GM_log
+// @grant        GM_xmlhttpRequest
+// @connect      raw.githubusercontent.com
 // ==/UserScript==
 
 (function () {
