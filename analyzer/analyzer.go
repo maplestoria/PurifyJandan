@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"compress/gzip"
 	"context"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"html"
 	"io"
@@ -29,11 +29,12 @@ func main() {
 	fmt.Printf("Current working directory: %s\n", wd)
 	fmt.Printf("Parent directory: %s\n", parent)
 
-	blockedUsers, err := readBlockedUsers(filepath.Join(parent, "blocked_users.txt"))
+	pathBlockedUsers := filepath.Join(parent, "blocked_users.json")
+	blockedUsers, err := readBlockedUsers(pathBlockedUsers)
 	if err != nil {
 		log.Printf("Failed to read blocked users: %v\n", err)
 	}
-	fmt.Printf("Loaded %d blocked users.\n", len(blockedUsers))
+	fmt.Printf("Loaded %d blocked users.\n", len(blockedUsers.Nicknames)+len(blockedUsers.IDs))
 
 	csvPath := filepath.Join(parent, "user_activity.csv")
 	fmt.Printf("Reading posts from CSV: %s\n", csvPath)
@@ -68,16 +69,12 @@ func main() {
 			break
 		}
 		if shouldBlock {
-			// add the user to blocked list and persist
-			if _, exists := blockedUsers[utp.User]; !exists {
-				blockedUsers[utp.User] = 1
-				err := appendBlockedUser(filepath.Join("..", "blocked_users.txt"), utp.User)
-				if err != nil {
-					log.Printf("Failed to append blocked user: %v", err)
-				} else {
-					fmt.Printf("User: %s has been added to the blocked list.\n", utp.User)
-				}
+			if utp.Post.UserId != 0 {
+				blockedUsers.IDs = append(blockedUsers.IDs, utp.Post.UserId)
+			} else {
+				blockedUsers.Nicknames = append(blockedUsers.Nicknames, utp.Post.Author)
 			}
+			persistBlockedUser(pathBlockedUsers, blockedUsers)
 			fmt.Printf("User: %s, Post ID: %d, Image URL: %s is flagged by GenAI analysis.\n", utp.User, utp.Post.ID, url)
 		} else {
 			fmt.Printf("User: %s, Post ID: %d, Image URL: %s is clean.\n", utp.User, utp.Post.ID, url)
@@ -85,36 +82,18 @@ func main() {
 	}
 }
 
-// appendBlockedUser appends a username to the blocked users file.
-func appendBlockedUser(path, user string) error {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = f.WriteString(user + "\n")
-	return err
-}
-
 // readBlockedUsers reads a list of blocked users from a file (one username per line).
-func readBlockedUsers(path string) (map[string]int, error) {
-	blocked := make(map[string]int)
+func readBlockedUsers(path string) (BlockedUsers, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return blocked, err
+		return BlockedUsers{}, err
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		blocked[line] = 1
-	}
-	if err := scanner.Err(); err != nil {
-		return blocked, err
+	var blocked BlockedUsers
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&blocked); err != nil {
+		return BlockedUsers{}, err
 	}
 	return blocked, nil
 }
@@ -154,7 +133,13 @@ func filterRecentPosts(posts []Post, days int) []Post {
 func groupPostsByUser(posts []Post) map[string][]Post {
 	userPosts := make(map[string][]Post)
 	for _, post := range posts {
-		userPosts[post.Author] = append(userPosts[post.Author], post)
+		var key string
+		if post.UserId == 0 {
+			key = post.Author
+		} else {
+			key = strconv.Itoa(post.UserId)
+		}
+		userPosts[key] = append(userPosts[key], post)
 	}
 	return userPosts
 }
@@ -165,8 +150,18 @@ type UserTopPost struct {
 }
 
 // getTopPostsByVoteNegative finds the top 1 post with most VoteNegative for each user.
-func getTopPostsByVoteNegative(userPosts map[string][]Post, blockedUsers map[string]int) []UserTopPost {
+func getTopPostsByVoteNegative(userPosts map[string][]Post, blockedUsers BlockedUsers) []UserTopPost {
 	var topPosts []UserTopPost
+	// Build quick lookup sets for blocked user IDs and nicknames
+	blockedIDSet := make(map[string]struct{})
+	for _, id := range blockedUsers.IDs {
+		blockedIDSet[strconv.Itoa(id)] = struct{}{}
+	}
+	blockedNameSet := make(map[string]struct{})
+	for _, name := range blockedUsers.Nicknames {
+		blockedNameSet[name] = struct{}{}
+	}
+
 	for user, posts := range userPosts {
 		if len(posts) == 0 {
 			continue
@@ -177,11 +172,30 @@ func getTopPostsByVoteNegative(userPosts map[string][]Post, blockedUsers map[str
 				top = p
 			}
 		}
-		if _, blocked := blockedUsers[user]; blocked {
+		// Determine if user is blocked by user_id or author
+		blocked := false
+		if top.UserId != 0 {
+			if _, found := blockedIDSet[strconv.Itoa(top.UserId)]; found {
+				blocked = true
+			}
+		} else {
+			if _, found := blockedNameSet[top.Author]; found {
+				blocked = true
+			}
+		}
+		if blocked {
 			fmt.Printf("Skipping blocked user: %s\n", user)
 			continue
 		}
 		topPosts = append(topPosts, UserTopPost{User: user, Post: top})
+	}
+	// sort topPosts by VoteNegative descending
+	for i := 0; i < len(topPosts)-1; i++ {
+		for j := i + 1; j < len(topPosts); j++ {
+			if topPosts[j].Post.VoteNegative > topPosts[i].Post.VoteNegative {
+				topPosts[i], topPosts[j] = topPosts[j], topPosts[i]
+			}
+		}
 	}
 	return topPosts
 }
@@ -280,13 +294,15 @@ func ReadPostsFromCSV(path string) ([]Post, error) {
 			continue // skip incomplete rows
 		}
 		id, _ := strconv.Atoi(rec[0])
-		voteNeg, _ := strconv.Atoi(rec[3])
-		votePos, _ := strconv.Atoi(rec[4])
-		content := html.UnescapeString(rec[5])
+		userId, _ := strconv.Atoi(rec[2])
+		voteNeg, _ := strconv.Atoi(rec[4])
+		votePos, _ := strconv.Atoi(rec[5])
+		content := html.UnescapeString(rec[6])
 		post := Post{
 			ID:           id,
 			Author:       rec[1],
-			DateGMT:      rec[2],
+			UserId:       userId,
+			DateGMT:      rec[3],
 			Content:      content,
 			VoteNegative: voteNeg,
 			VotePositive: votePos,
@@ -299,6 +315,7 @@ func ReadPostsFromCSV(path string) ([]Post, error) {
 type Post struct {
 	ID           int
 	Author       string
+	UserId       int
 	DateGMT      string
 	Content      string
 	VoteNegative int
@@ -326,4 +343,27 @@ func ExtractImgSrcs(content string) (string, string) {
 		}
 	}
 	return "", ""
+}
+
+// BlockedUsers represents the structure of blocked_users.json
+type BlockedUsers struct {
+	IDs       []int    `json:"ids"`
+	Nicknames []string `json:"nicknames"`
+}
+
+// persistBlockedUser saves the blocked users to a JSON file at the given path.
+func persistBlockedUser(path string, blocked BlockedUsers) error {
+	file, err := os.Create(path)
+	if err != nil {
+		log.Printf("Failed to open %s for writing: %v", path, err)
+		return err
+	}
+	defer file.Close()
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(blocked); err != nil {
+		log.Printf("Failed to encode blocked users to %s: %v", path, err)
+		return err
+	}
+	return nil
 }

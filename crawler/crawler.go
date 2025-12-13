@@ -309,7 +309,7 @@ func openCSV(path string) (*csv.Writer, *os.File, error) {
 	info, _ := f.Stat()
 	w := csv.NewWriter(f)
 	if info.Size() == 0 {
-		_ = w.Write([]string{"id", "author", "date_gmt", "vote_negative", "vote_positive", "content"})
+		_ = w.Write([]string{"id", "author", "user_id", "date_gmt", "vote_negative", "vote_positive", "content"})
 		w.Flush()
 	}
 	return w, f, nil
@@ -319,6 +319,7 @@ func appendCSVRecord(w *csv.Writer, item Item) error {
 	rec := []string{
 		fmt.Sprintf("%d", item.ID),
 		item.Author,
+		fmt.Sprintf("%d", item.UserId),
 		item.DateGMT,
 		fmt.Sprintf("%d", item.VoteNegative),
 		fmt.Sprintf("%d", item.VotePositive),
