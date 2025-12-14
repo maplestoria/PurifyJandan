@@ -68,14 +68,71 @@
             onerror: function (error) {
                 GM_log('Error fetching blocked users list:' + error);
             },
-            onabort : function () {
+            onabort: function () {
                 GM_log('Request for blocked users list was aborted.');
             },
-            ontimeout : function () {
+            ontimeout: function () {
                 GM_log('Request for blocked users list timed out.');
             }
         });
     } else {
         GM_log("Purify Jandan: No update needed at this time.");
+    }
+
+    if (window.location.pathname === '/') {
+        const targetNodes = document.querySelectorAll("div#list-hot, div#list-pic, div#list-ooxx, div#list-treehole")
+        const observerOptions = {
+            childList: true,
+            attributes: false,
+            subtree: true
+        }
+
+        const observer = new MutationObserver(callback);
+        for (const node of targetNodes) {
+            observer.observe(node, observerOptions);
+        }
+
+        function callback(mutationList, observer) {
+            mutationList.forEach((mutation) => {
+                if (mutation.type === 'childList' && mutation.addedNodes.length === 3) {
+                    let hotItems = mutation.addedNodes[1].children
+                    for (let item of hotItems) {
+                        const title = item.querySelector("div.hot-title").innerText
+                        const userNickName = title.substring(0, title.indexOf("@") - 1)
+                        if (blockNickStore.blockedUsers[userNickName] === true) {
+                            const blockedDiv = document.createElement("div");
+                            blockedDiv.className = "comment-block";
+                            blockedDiv.innerText = " 已屏蔽内容 ";
+                            blockedDiv.style.fontSize = "12px";
+                            blockedDiv.style.fontWeight = "400";
+                            blockedDiv.style.color = "#bbb";
+                            blockedDiv.style.textAlign = "center";
+                            blockedDiv.style.padding = "5px 20px 5px 12px";
+                            blockedDiv.style.margin = "0 -12px";
+                            blockedDiv.style.borderTop = "1px solid #e5e5e5";
+
+                            const unblockSpan = document.createElement("span");
+                            unblockSpan.className = "unblock-btn";
+                            unblockSpan.innerHTML = '<i class="bi bi-shield-slash"></i>';
+                            blockedDiv.appendChild(unblockSpan);
+                            
+                            item.replaceChildren(blockedDiv);
+                        }
+                    }
+                    for (let i = 0; i < hotItems.length; i++) {
+                        const item = hotItems[i];
+                        const blocker = item.querySelector("div.comment-block")
+                        if (blocker) {
+                            const nextItem = hotItems[i + 1];
+                            const normalItem = nextItem.querySelector("div.hot-title");
+                            if (normalItem) {
+                                blocker.style.borderBottom = "1px solid #e5e5e5";
+                            }
+                        }
+                    }
+                    observer.disconnect();
+                }
+            });
+        }
     }
 })();
