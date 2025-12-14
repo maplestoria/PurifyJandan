@@ -38,7 +38,7 @@
         || Object.keys(blockNickStore.blockedUsers).length === 0) {
         GM_log("Purify Jandan: Fetching updated blocked users list...");
 
-        const blockedUsers = "https://cdn.jsdelivr.net/gh/maplestoria/PurifyJandan@refs/heads/main/blocked_users.json";
+        const blockedUsers = "https://cdn.jsdelivr.net/gh/maplestoria/PurifyJandan@main/blocked_users.json";
 
         GM_xmlhttpRequest({
             method: "GET",
