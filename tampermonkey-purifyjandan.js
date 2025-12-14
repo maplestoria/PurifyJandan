@@ -111,22 +111,32 @@
                             blockedDiv.style.margin = "0 -12px";
                             blockedDiv.style.borderTop = "1px solid #e5e5e5";
 
-                            const unblockSpan = document.createElement("span");
-                            unblockSpan.className = "unblock-btn";
-                            unblockSpan.innerHTML = '<i class="bi bi-shield-slash"></i>';
-                            blockedDiv.appendChild(unblockSpan);
+                            const unblockLink = document.createElement("a");
+                            unblockLink.href = "javascript:;";
+                            unblockLink.style.textDecoration = "none";
+                            unblockLink.style.color = "#666";
+                            unblockLink.innerText = '「手贱一下」';
+                            unblockLink.style.fontSize = "12px";
+                            blockedDiv.appendChild(unblockLink);
+                            
+                            const savedChildren1 = item.querySelector("div.hot-title").cloneNode(true);
+                            const savedChildren2 = item.querySelector("div.hot-content").cloneNode(true);
+                            const savedChildren3 = item.querySelector("div.hot-vote").cloneNode(true);
+                            unblockLink.addEventListener("click", function () {
+                                item.replaceChildren(savedChildren1, savedChildren2, savedChildren3);
+                            });
                             
                             item.replaceChildren(blockedDiv);
                         }
                     }
                     for (let i = 0; i < hotItems.length; i++) {
                         const item = hotItems[i];
-                        const blocker = item.querySelector("div.comment-block")
-                        if (blocker) {
+                        const blockedDiv = item.querySelector("div.comment-block")
+                        if (blockedDiv) {
                             const nextItem = hotItems[i + 1];
                             const normalItem = nextItem.querySelector("div.hot-title");
                             if (normalItem) {
-                                blocker.style.borderBottom = "1px solid #e5e5e5";
+                                blockedDiv.style.borderBottom = "1px solid #e5e5e5";
                             }
                         }
                     }
