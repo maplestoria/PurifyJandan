@@ -20,6 +20,10 @@ import (
 	"google.golang.org/genai"
 )
 
+var allowedUsers = map[string]bool{
+	"sein": true,
+}
+
 func main() {
 	wd, err := os.Getwd()
 	if err != nil {
@@ -42,12 +46,11 @@ func main() {
 	}
 	fmt.Printf("Total posts loaded: %d\n", len(posts))
 
-	filtered := filterRecentPosts(posts, 3)
-	fmt.Printf("Posts in the last 3 days: %d\n", len(filtered))
+	filtered := filterRecentPosts(posts, 3, blockedUsers)
+	fmt.Printf("Posts to be checked in the last 3 days: %d\n", len(filtered))
 	userPosts := groupPostsByUser(filtered)
 	fmt.Printf("Total users with posts in the last 3 days: %d\n", len(userPosts))
-	topPosts := getTopPostsByVoteNegative(userPosts, blockedUsers)
-	fmt.Printf("Top 1 post with most VoteNegative for each user (last 3 days): %d\n", len(topPosts))
+	topPosts := getTopPostsByVoteNegative(userPosts)
 
 	for _, utp := range topPosts {
 		url, mimeType := ExtractImgSrcs(utp.Post.Content)
@@ -109,16 +112,43 @@ func importTime(dateStr string) (time.Time, error) {
 }
 
 // filterRecentPosts filters posts newer than N days ago and not by blocked users.
-func filterRecentPosts(posts []Post, days int) []Post {
+func filterRecentPosts(posts []Post, days int, blockedUsers BlockedUsers) []Post {
 	now := time.Now().UTC()
 	threshold := now.AddDate(0, 0, -days)
 	filtered := make([]Post, 0, len(posts))
+
+	// Build quick lookup sets for blocked user IDs and nicknames
+	blockedIDSet := make(map[int]struct{})
+	for _, id := range blockedUsers.IDs {
+		blockedIDSet[id] = struct{}{}
+	}
+	blockedNameSet := make(map[string]struct{})
+	for _, name := range blockedUsers.Nicknames {
+		blockedNameSet[name] = struct{}{}
+	}
+
 	for _, post := range posts {
 		t, err := importTime(post.DateGMT)
 		if err != nil {
 			continue
 		}
-		if t.After(threshold) {
+		// Determine if user is blocked by user_id or author
+		blocked := false
+		if post.UserId != 0 {
+			if _, found := blockedIDSet[post.UserId]; found {
+				blocked = true
+			}
+		} else {
+			if _, found := blockedNameSet[post.Author]; found {
+				blocked = true
+			}
+		}
+		if blocked {
+			continue
+		}
+
+		userId := strconv.Itoa(post.UserId)
+		if t.After(threshold) && (!allowedUsers[post.Author] || (post.UserId != 0 && !allowedUsers[userId])) {
 			filtered = append(filtered, post)
 		}
 	}
@@ -146,17 +176,8 @@ type UserTopPost struct {
 }
 
 // getTopPostsByVoteNegative finds the top 1 post with most VoteNegative for each user.
-func getTopPostsByVoteNegative(userPosts map[string][]Post, blockedUsers BlockedUsers) []UserTopPost {
+func getTopPostsByVoteNegative(userPosts map[string][]Post) []UserTopPost {
 	var topPosts []UserTopPost
-	// Build quick lookup sets for blocked user IDs and nicknames
-	blockedIDSet := make(map[string]struct{})
-	for _, id := range blockedUsers.IDs {
-		blockedIDSet[strconv.Itoa(id)] = struct{}{}
-	}
-	blockedNameSet := make(map[string]struct{})
-	for _, name := range blockedUsers.Nicknames {
-		blockedNameSet[name] = struct{}{}
-	}
 
 	for user, posts := range userPosts {
 		if len(posts) == 0 {
@@ -167,21 +188,6 @@ func getTopPostsByVoteNegative(userPosts map[string][]Post, blockedUsers Blocked
 			if p.VoteNegative > top.VoteNegative {
 				top = p
 			}
-		}
-		// Determine if user is blocked by user_id or author
-		blocked := false
-		if top.UserId != 0 {
-			if _, found := blockedIDSet[strconv.Itoa(top.UserId)]; found {
-				blocked = true
-			}
-		} else {
-			if _, found := blockedNameSet[top.Author]; found {
-				blocked = true
-			}
-		}
-		if blocked {
-			fmt.Printf("Skipping blocked user: %s\n", user)
-			continue
 		}
 		topPosts = append(topPosts, UserTopPost{User: user, Post: top})
 	}
@@ -283,13 +289,13 @@ func ReadPostsFromCSV(path string) ([]Post, error) {
 	defer file.Close()
 
 	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = -1 // allow variable number of fields
+	reader.FieldsPerRecord = 7
 
 	records, err := reader.ReadAll()
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Total records read from CSV: %d\n", len(records))
+
 	var posts []Post
 	for i, rec := range records {
 		if i == 0 {
