@@ -247,4 +247,87 @@
             });
         };
     }
+    // "大吐槽"页面屏蔽
+    else if (window.location.pathname === "/tucao") {
+        const targetNode = document.querySelector("#main-warpper > div.container > div > main > div:nth-child(2) > div.post.p-0 > div:nth-child(2)")
+        const observerOptions = {
+            childList: true,
+            attributes: false,
+            subtree: false
+        }
+
+        const observer = new MutationObserver(callback);
+        observer.observe(targetNode, observerOptions);
+
+        function callback(mutationList, observer) {
+            mutationList.forEach((mutation) => {
+                if (mutation.type === 'childList' && mutation.addedNodes.length === 0) {
+                    let target = mutation.target;
+                    if (target?.children.length > 0) {
+                        for (let item of target.children) {
+                            if (item.className === "comment-row p-2") {
+                                const author = item.querySelector("span.author-anonymous, span.author-logged")?.innerText;
+                                if (blockNickStore.blockedUsers[author] === true) {
+                                    const blockedDiv = document.createElement("div");
+                                    blockedDiv.className = "comment-block";
+                                    blockedDiv.innerText = " 已屏蔽内容 ";
+                                    blockedDiv.style.fontSize = "12px";
+                                    blockedDiv.style.fontWeight = "400";
+                                    blockedDiv.style.color = "#bbb";
+                                    blockedDiv.style.textAlign = "center";
+                                    blockedDiv.style.margin = "0 -12px";
+
+                                    const unblockLink = document.createElement("a");
+                                    unblockLink.href = "javascript:;";
+                                    unblockLink.style.textDecoration = "none";
+                                    unblockLink.style.color = "#666";
+                                    unblockLink.innerText = '「手贱一下」';
+                                    unblockLink.style.fontSize = "12px";
+                                    blockedDiv.appendChild(unblockLink);
+                                    item.appendChild(blockedDiv);
+
+                                    const savedChildren1 = item.querySelector("div.comment-meta");
+                                    const savedChildren2 = item.querySelector("div.comment-content");
+                                    const savedChildren3 = item.querySelector("div.comment-func");
+                                    const savedChildren4 = item.querySelector("div.tucao-container.p-2");
+                                    savedChildren1.style.visibility = "hidden";
+                                    savedChildren1.style.height = "0";
+                                    savedChildren1.style.padding = "0";
+
+                                    savedChildren2.style.visibility = "hidden";
+                                    savedChildren2.style.height = "0";
+                                    savedChildren2.style.padding = "0";
+
+                                    savedChildren3.style.visibility = "hidden";
+                                    savedChildren3.style.height = "0";
+
+                                    savedChildren4.style.visibility = "hidden";
+                                    savedChildren4.style.height = "0";
+
+                                    unblockLink.addEventListener("click", function () {
+                                        savedChildren1.style.visibility = "visible";
+                                        savedChildren1.style.height = "auto";
+                                        savedChildren1.style.padding = "5px 10px";
+
+                                        savedChildren2.style.visibility = "visible";
+                                        savedChildren2.style.height = "auto";
+                                        savedChildren2.style.padding = "10px";
+
+                                        savedChildren3.style.visibility = "visible";
+                                        savedChildren3.style.height = "auto";
+
+                                        savedChildren4.style.visibility = "visible";
+                                        savedChildren4.style.height = "auto";
+                                        blockedDiv.remove();
+                                    });
+                                }
+                            } else if (item.className === "google-auto-placed") {
+                                item.remove();
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
 })();
