@@ -216,9 +216,10 @@ func analyzeContentWithGenAI(content []byte, mimeType string) (bool, error) {
 			Respond ONLY with "yes" or "no".
 
 			Return "yes" if the image satisfies at least one of the following:
-			- Social media screenshot (WeChat,WeiXin,Weibo,DouBan,Xiaohongshu,RedNote,Twitter,NGA,Reddit)
+			- Social media screenshot (chat, comments, interactions
 			- Gender conflict or implied female entitlement to financial/emotional benefits
-			- Unsettling animal (e.g., snakes, spiders)
+			- Unsettling content (e.g., snakes, spiders)
+			- Dispute-provoking content
 
 			Otherwise, return "no".
 		`),
