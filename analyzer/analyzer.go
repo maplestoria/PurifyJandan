@@ -262,6 +262,7 @@ func analyzeContentWithGenAI(content []byte, mimeType string) (bool, error) {
 	}
 
 	if strings.Contains(strings.ToLower(result.Text()), "yes") {
+		fmt.Printf("%s\r\n", result.Text())
 		return true, nil
 	} else {
 		return false, nil
