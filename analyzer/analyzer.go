@@ -212,16 +212,38 @@ func analyzeContentWithGenAI(content []byte, mimeType string) (bool, error) {
 
 	parts := []*genai.Part{
 		genai.NewPartFromBytes(content, mimeType),
-		genai.NewPartFromText(`
-			Respond ONLY with "yes" or "no".
-
-			Return "yes" if the image satisfies at least one of the following:
-			- Social media screenshot (chat, comments, interactions
-			- Gender conflict or implied female entitlement to financial/emotional benefits
-			- Unsettling content (e.g., snakes, spiders)
-			- Dispute-provoking content
-
-			Otherwise, return "no".
+		genai.NewPartFromText(`Does the image satisfy at least one of the following conditions?
+		
+			1. Social Media Content or Interactions:
+			
+				- Screenshots of chat conversations, including:
+					- Individuals complaining, venting, or expressing dissatisfaction to others about relationships, work, family, news, or personal matters.
+					- People seeking advice, empathy, validation, or support from friends, acquaintances, or the public.
+					- Sharing personal experiences, achievements, struggles, or life events in messages or posts.
+					- Discussions or debates around current events, news, societal issues, policies, or trending topics.
+					- Exchanges involving arguments, heated discussions, or confrontations in group chats, community threads, or comment sections.
+					- Posts, tweets, or comments reflecting strong, controversial, or inflammatory opinions (excluding those that are simply humorous, lighthearted, or interesting).
+					- Content discussing or responding to memes, viral trends, online challenges, or pop culture phenomena only if the discussion or reaction is likely to provoke dispute, offense, or controversy; ordinary, funny, or non-controversial memes are excluded.
+					- Conversations about dating, relationships, boundaries, or social expectations.
+					
+			2. Gender-Related Themes:
+			
+				- Depictions, implications, or discussions of gender conflict (such as disagreements or disputes about perspectives, roles, or privileges across genders).
+				- Content suggesting entitlement—especially by females—to financial, emotional, or social benefits (including topics like "gold-digging," relationship demands, or debates over gender privilege).
+				- Discourse around traditional vs. modern gender roles or stereotypes.
+				
+			3. Unsettling or Disturbing Content:
+			
+				- Images featuring animals or creatures commonly associated with fear or discomfort (e.g., snakes, spiders, insects, or other phobia-inducing wildlife).
+				- Scenes depicting injuries, medical conditions, graphic, or otherwise distressing content.
+				- Unnerving, bizarre, or grotesque visuals designed to provoke a sense of unease.
+				
+			4. Dispute-Provoking or Controversial Content:
+			
+				- Content featuring or related to heated debates, arguments, or controversy about political, social, religious, or ideological subjects.
+				- Posts, images, or screenshots likely to spark strong emotional reactions (including offensive memes, inflammatory statements, or polarizing opinions).
+				- Material promoting misinformation, conspiracy theories, or unfounded claims.
+				- Content explicitly designed to provoke, incite arguments, or “troll” others.
 		`),
 	}
 
