@@ -1,23 +1,23 @@
 // ==UserScript==
-// @name         智能净化煎蛋（AI内容过滤增强版）
-// @namespace    maplestoria.purifyjandan
-// @version      2025-12-19
-// @description  利用生成式AI智能识别与过滤不良图片，屏蔽名单自动根据AI分析结果动态更新，智能拦截首页热榜、热榜和大吐槽页面的违规用户及内容，全面提升浏览体验。
-// @author       maplestoria
-// @run-at document-end
-// @downloadURL  https://cdn.jsdelivr.net/gh/maplestoria/PurifyJandan@main/purifyjandan.js
-// @copyright    2025, maplestoria
-// @license      MIT
-// @homepageURL  https://github.com/maplestoria
-// @supportURL   https://github.com/maplestoria/PurifyJandan/issues
-// @contributionURL https://github.com/maplestoria/PurifyJandan
-// @match        https://jandan.net/*
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=jandan.net
-// @grant        GM_setValue
-// @grant        GM_getValue
-// @grant        GM_log
-// @grant        GM_xmlhttpRequest
-// @connect      cdn.jsdelivr.net
+// @name             智能净化煎蛋（AI内容过滤增强版）
+// @namespace        maplestoria.purifyjandan
+// @version          2025-12-19
+// @description      利用生成式AI智能识别与过滤不良图片，屏蔽名单自动根据AI分析结果动态更新，智能拦截首页热榜、热榜和大吐槽页面的违规用户及内容，全面提升浏览体验。
+// @author           maplestoria
+// @run-at           document-end
+// @downloadURL      https://cdn.jsdelivr.net/gh/maplestoria/PurifyJandan@main/purifyjandan.js
+// @copyright        2025, maplestoria
+// @license          MIT
+// @homepageURL      https://github.com/maplestoria
+// @supportURL       https://github.com/maplestoria/PurifyJandan/issues
+// @contributionURL  https://github.com/maplestoria/PurifyJandan
+// @match            https://jandan.net/*
+// @icon             https://www.google.com/s2/favicons?sz=64&domain=jandan.net
+// @grant            GM_setValue
+// @grant            GM_getValue
+// @grant            GM_log
+// @grant            GM_xmlhttpRequest
+// @connect          cdn.jsdelivr.net
 // ==/UserScript==
 
 (function () {
