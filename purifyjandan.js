@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             智能净化煎蛋（AI内容过滤增强版）
 // @namespace        maplestoria.purifyjandan
-// @version          2025-12-19
+// @version          2025-12-19.1
 // @description      利用生成式AI智能识别与过滤不良图片，屏蔽名单自动根据AI分析结果动态更新，智能拦截首页热榜、热榜和大吐槽页面的违规用户及内容，全面提升浏览体验。
 // @author           maplestoria
 // @run-at           document-end
@@ -23,6 +23,7 @@
 (function () {
     'use strict';
     const lastUpdateTimeKey = "purifyjandan:lastFetchTime";
+    const idAuthorMappingKey = "purifyjandan:idAuthorMapping";
     const updateInterval = 6 * 60 * 60 * 1000; // 6 hours
     const lastUpdateTime = GM_getValue(lastUpdateTimeKey, null);
     GM_log("Purify Jandan: Last update time:", new Date(lastUpdateTime).toLocaleString());
@@ -31,6 +32,16 @@
     let blockNickStore = blockedNickNames ? JSON.parse(blockedNickNames) : { blockedUsers: {} };
     if (!blockNickStore.blockedUsers || typeof blockNickStore.blockedUsers !== 'object') {
         blockNickStore.blockedUsers = {};
+    }
+    const _idAuthorMapping = GM_getValue(idAuthorMappingKey, null);
+    if (_idAuthorMapping) {
+        const idAuthorMapping = JSON.parse(_idAuthorMapping);
+        for (const id in idAuthorMapping) {
+            if (!Object.hasOwn(idAuthorMapping, id)) continue;
+
+            const author = idAuthorMapping[id];
+            blockNickStore.blockedUsers[author] = true;
+        }
     }
 
     let blockedIds = localStorage.getItem("jandan:blockIDStore");
@@ -69,6 +80,7 @@
                 localStorage.setItem("jandan:blockNickStore", JSON.stringify(blockNickStore));
 
                 GM_setValue(lastUpdateTimeKey, Date.now());
+                GM_setValue(idAuthorMappingKey, JSON.stringify(blcoked.mappings));
                 GM_log("Purify Jandan: Blocked users list updated.");
             },
             onerror: function (error) {
@@ -221,14 +233,6 @@
         }
     }
 
-    function isIOS() {
-        return /iP(hone|od|ad)/.test(navigator.userAgent);
-    }
-
-    function isSafari() {
-        return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    }
-
     // 首页"热榜"屏蔽
     if (window.location.pathname === '/') {
         const targetNodes = document.querySelectorAll("div#list-hot, div#list-pic, div#list-ooxx, div#list-treehole");
@@ -259,18 +263,15 @@
             return;
         }
 
-        if (isIOS() && isSafari()) {
-            // stupid but i'm tired
-            const intervalId = setInterval(() => {
-                const rows = document.querySelectorAll("#main-warpper > div.container > div > main > div:nth-child(2) > div.post.p-0 > div > div.comment-row.p-2");
-                if (rows) {
-                    for (const row of rows) {
-                        handleBlockedCommentRow(row);
-                    }
-                    clearInterval(intervalId);
+        const intervalId = setInterval(() => {
+            const rows = document.querySelectorAll("#main-warpper > div.container > div > main > div:nth-child(2) > div.post.p-0 > div > div.comment-row.p-2");
+            if (rows) {
+                for (const row of rows) {
+                    handleBlockedCommentRow(row);
                 }
-            }, 500);
-        }
+                clearInterval(intervalId);
+            }
+        }, 500);
 
         const observerOptions = {
             childList: true,
@@ -293,17 +294,15 @@
             return;
         }
 
-        if (isIOS() && isSafari()) {
-            const intervalId = setInterval(() => {
-                const rows = document.querySelectorAll("#main-warpper > div.container > div > main > div:nth-child(2) > div.post.p-0 > div:nth-child(2) > div.comment-row.p-2");
-                if (rows) {
-                    for (const row of rows) {
-                        handleBlockedCommentRow(row, "div.tucao-container.p-2");
-                    }
-                    clearInterval(intervalId);
+        const intervalId = setInterval(() => {
+            const rows = document.querySelectorAll("#main-warpper > div.container > div > main > div:nth-child(2) > div.post.p-0 > div:nth-child(2) > div.comment-row.p-2");
+            if (rows) {
+                for (const row of rows) {
+                    handleBlockedCommentRow(row, "div.tucao-container.p-2");
                 }
-            }, 500);
-        }
+                clearInterval(intervalId);
+            }
+        }, 500);
 
         const observerOptions = {
             childList: true,
