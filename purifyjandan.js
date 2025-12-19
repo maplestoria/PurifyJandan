@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Purify Jandan
+// @name         智能净化煎蛋（AI内容过滤增强版）
 // @namespace    http://tampermonkey.net/
 // @version      2025-12-19
-// @description  Purify Jandan by blocking certain users
+// @description  基于生成式AI智能识别与过滤不良图片，自动屏蔽首页热榜、热榜和大吐槽页面的屏蔽用户及内容，有效提升浏览体验。
 // @author       maplestoria
 // @homepage     https://github.com/maplestoria/PurifyJandan
 // @downloadURL  https://cdn.jsdelivr.net/gh/maplestoria/PurifyJandan@main/purifyjandan.js
