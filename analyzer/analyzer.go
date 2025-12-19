@@ -71,8 +71,10 @@ func main() {
 		if shouldBlock {
 			if utp.Post.UserId != 0 {
 				blockedUsers.IDs = append(blockedUsers.IDs, utp.Post.UserId)
+				blockedUsers.Mappings[strconv.Itoa(utp.Post.UserId)] = utp.Post.Author
+			} else {
+				blockedUsers.Nicknames = append(blockedUsers.Nicknames, utp.Post.Author)
 			}
-			blockedUsers.Nicknames = append(blockedUsers.Nicknames, utp.Post.Author)
 			persistBlockedUser(pathBlockedUsers, blockedUsers)
 			fmt.Printf("UserId: %d, Author: %s, Post ID: %d, Image URL: %s is flagged by GenAI analysis.\n", utp.Post.UserId, utp.Post.Author, utp.Post.ID, url)
 		} else {
@@ -382,8 +384,9 @@ func ExtractImgSrcs(content string) (string, string) {
 
 // BlockedUsers represents the structure of blocked_users.json
 type BlockedUsers struct {
-	IDs       []int    `json:"ids"`
-	Nicknames []string `json:"nicknames"`
+	IDs       []int             `json:"ids"`
+	Nicknames []string          `json:"nicknames"`
+	Mappings  map[string]string `json:"mappings"`
 }
 
 // persistBlockedUser saves the blocked users to a JSON file at the given path.
