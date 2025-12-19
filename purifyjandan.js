@@ -2,7 +2,7 @@
 // @name         智能净化煎蛋（AI内容过滤增强版）
 // @namespace    http://tampermonkey.net/
 // @version      2025-12-19
-// @description  基于生成式AI智能识别与过滤不良图片，自动屏蔽首页热榜、热榜和大吐槽页面的屏蔽用户及内容，有效提升浏览体验。
+// @description  利用生成式AI智能识别与过滤不良图片，屏蔽名单自动根据AI分析结果动态更新，智能拦截首页热榜、热榜和大吐槽页面的违规用户及内容，全面提升浏览体验。
 // @author       maplestoria
 // @homepage     https://github.com/maplestoria/PurifyJandan
 // @downloadURL  https://cdn.jsdelivr.net/gh/maplestoria/PurifyJandan@main/purifyjandan.js
