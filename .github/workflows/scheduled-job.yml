@@ -2,7 +2,7 @@ name: Scheduled Job
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Every 6 hours
+    - cron: '0 0 */1 * *'
 
 jobs:
   scheduled-job:
@@ -30,3 +30,6 @@ jobs:
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Purge CDN Cache
+        run: |
+          curl "https://purge.jsdelivr.net/gh/maplestoria/PurifyJandan@main/blocked_users.json"
