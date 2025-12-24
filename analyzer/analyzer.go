@@ -214,7 +214,7 @@ func analyzeContentWithGenAI(content []byte, mimeType string) (bool, error) {
 
 	parts := []*genai.Part{
 		genai.NewPartFromBytes(content, mimeType),
-		genai.NewPartFromText(`Does the image satisfy at least one of the following conditions?
+		genai.NewPartFromText(`Return YES or NO, Does the image satisfy at least one of the following conditions?
 		
 			1. Social Media Content or Interactions:
 			
